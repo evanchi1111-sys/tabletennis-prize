@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>桌球比賽獎品採購規劃</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#f5f6f8; --card:#ffffff; --text:#1c1e21; --sub:#6b7280;
+  --line:#e5e7eb; --accent:#2563eb; --accent-d:#1d4ed8;
+  --ok:#16a34a; --warn:#dc2626; --head:#eef2ff;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#15171a; --card:#1f2226; --text:#e8e9eb; --sub:#9aa0a6;
+    --line:#31353b; --accent:#5b9bff; --accent-d:#3f7fe0;
+    --ok:#34d058; --warn:#ff6b6b; --head:#23283a;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#15171a; --card:#1f2226; --text:#e8e9eb; --sub:#9aa0a6;
+  --line:#31353b; --accent:#5b9bff; --accent-d:#3f7fe0;
+  --ok:#34d058; --warn:#ff6b6b; --head:#23283a;
+}
+*{box-sizing:border-box}
+html{line-height:1.5;-webkit-text-size-adjust:100%;}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC","Microsoft JhengHei",sans-serif;
+  font-size:16px;}
+body{padding:16px;max-width:860px;margin:0 auto;padding-bottom:calc(40px + env(safe-area-inset-bottom,0px));}
+/* Touch & Interaction: visible focus rings, min touch target size, pointer affordance */
+button,.chip,input,select,label.chip{cursor:pointer;}
+input,select{cursor:text;}
+button:focus-visible,.chip:focus-within,input:focus-visible,select:focus-visible,a:focus-visible{
+  outline:3px solid var(--accent);outline-offset:2px;
+}
+button.primary{min-height:44px;}
+.chip{min-height:40px;}
+button,input,select,.chip{transition:background-color .18s ease,border-color .18s ease,transform .1s ease,outline-color .12s ease;}
+@media (prefers-reduced-motion: reduce){
+  *{transition:none !important;animation:none !important;}
+}
+[aria-hidden="true"]{pointer-events:none;}
+h1{font-size:20px;margin:4px 0 2px;}
+p.desc{color:var(--sub);font-size:13px;margin:0 0 16px;}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:14px;}
+.card h2{font-size:15px;margin:0 0 10px;display:flex;align-items:center;gap:6px;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+label{display:block;font-size:12px;color:var(--sub);margin-bottom:4px;}
+input[type=number],input[type=text],select{
+  width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;
+  background:var(--bg);color:var(--text);font-size:15px;
+}
+input[type=number]:focus,input[type=text]:focus,select:focus{outline:2px solid var(--accent);border-color:var(--accent);}
+.field{margin-bottom:10px;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+th,td{padding:7px 6px;border-bottom:1px solid var(--line);text-align:right;}
+th:first-child,td:first-child{text-align:left;}
+th{background:var(--head);font-weight:600;color:var(--sub);font-size:12px;}
+.twrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -4px;padding:0 4px;}
+.event-table input{width:80px;text-align:right;padding:6px;font-size:14px;}
+.event-card{border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:12px;background:var(--bg);}
+.event-card h3{margin:0 0 8px;font-size:14px;}
+.event-card .top-fields{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;}
+.rank-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;}
+.rank-block{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px;}
+.rank-block .rlabel{font-size:12px;font-weight:600;margin-bottom:6px;display:block;}
+.rank-block .subfield{margin-bottom:6px;}
+.rank-block .subfield label{font-size:12px;margin-bottom:2px;}
+.rank-subtotal{font-size:12px;color:var(--sub);margin-top:4px;line-height:1.4;font-weight:600;}
+.rank-subtotal span{color:var(--sub);}
+.rank-block input{width:100%;padding:6px;font-size:13px;}
+@media (max-width:480px){
+  .rank-grid{grid-template-columns:1fr 1fr 1fr;gap:6px;}
+  .rank-block{padding:6px;}
+  .rank-block input{padding:5px;font-size:12px;}
+}
+.item-row input.name{width:100%;min-width:90px;}
+.item-row select{min-width:110px;font-size:13px;padding:6px;}
+.item-card{border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px;background:var(--bg);}
+.item-card .top-fields{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0;}
+.chip-group{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;}
+.chip{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:999px;
+  padding:5px 10px;font-size:12px;cursor:pointer;background:var(--card);user-select:none;}
+.chip input{width:auto;margin:0;accent-color:var(--accent);}
+.chip.checked{background:var(--accent);border-color:var(--accent);color:#fff;}
+.item-subtotal{font-size:13px;color:var(--sub);margin-top:6px;text-align:right;}
+.item-subtotal b{color:var(--text);font-size:14px;}
+.item-row input.num{width:70px;text-align:right;}
+.summary-line{display:flex;justify-content:space-between;padding:6px 0;font-size:14px;border-bottom:1px dashed var(--line);}
+.summary-line:last-child{border-bottom:none;}
+.summary-line span:first-child{color:var(--sub);}
+.total{font-size:20px;font-weight:700;margin-top:6px;}
+.budget-status{margin-top:8px;padding:8px 10px;border-radius:8px;font-size:13px;font-weight:600;}
+.ok{background:rgba(22,163,74,.12);color:var(--ok);}
+.over{background:rgba(220,38,38,.12);color:var(--warn);}
+button.primary{
+  width:100%;padding:12px;border:none;border-radius:10px;background:var(--accent);
+  color:#fff;font-size:15px;font-weight:600;cursor:pointer;margin-top:6px;
+}
+button.primary:active{background:var(--accent-d);}
+button.primary:disabled{opacity:.5;cursor:not-allowed;}
+.hint{font-size:12px;color:var(--sub);margin-top:6px;}
+.section-note{font-size:12px;color:var(--sub);margin:-4px 0 10px;}
+@media (max-width:480px){
+  .grid2{grid-template-columns:1fr;}
+  h1{font-size:18px;}
+}
+</style>
+</head>
+<body>
+<h1><span aria-hidden="true">🏓</span> 桌球比賽獎品採購規劃</h1>
+<p class="desc">輸入賽事與獎品資訊，自動計算總支出並產生採購報表，可匯出 Excel 現場核對使用。</p>
+
+<div class="card">
+  <h2>📋 賽事總覽</h2>
+  <div class="grid2">
+    <div class="field">
+      <label>獎品總預算金額 (NT$)</label>
+      <input type="number" id="budget" min="0" step="1" placeholder="例如 20000">
+    </div>
+    <div class="field">
+      <label>參賽總人數</label>
+      <input type="number" id="totalParticipants" min="0" step="1" placeholder="例如 60">
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <h2><span aria-hidden="true">🏆</span> 賽別名次獎品設定</h2>
+  <p class="section-note">
+    每次比賽<b>僅會進行一種賽別</b>（單打／雙打／團體賽／趣味競賽擇一，不會同時進行），請先選擇本次的賽事類型：
+  </p>
+  <div class="chip-group" id="eventTypeSelector" role="radiogroup" aria-label="選擇賽事類型" style="margin-bottom:12px"></div>
+  <p class="section-note">
+    「參賽人數」為<b>人數統計用</b>，不影響金額計算；<br>
+    第一～三名及參加獎的<b>單價 × 份數/人數</b>都是指<b>可用於採購獎品項目的預算金額</b>，<u>不會單獨計入總支出</u>——實際支出請於下方「獎品項目清單」勾選對應獎項並填入實際採購的單價與數量；<br>
+    <b>參加獎不發放現金，一律以獎品項目實物發放</b>，請填每人/每隊的預算金額作為採購參考；<br>
+    ⚠️ 「參加獎」與第一～三名的設定金額<b>合計不得超過</b>上方「獎品總預算金額」，超過時系統會自動限制輸入。
+  </p>
+  <div id="eventCards"></div>
+</div>
+
+<div class="card">
+  <h2><span aria-hidden="true">🎁</span> 獎品項目清單（六項）</h2>
+  <p class="section-note">獎盃、獎牌、禮券等實體採購項目；「對應獎項」可複選（例如同一項獎品同時作為第二名與第三名獎項）。此清單的金額才是<b>實際採購支出</b>。<br>數量上限：一般賽別為該名次「份數」加總；<b>趣味競賽</b>為「每組人數 × 份數」加總（因得獎組別每位成員都要拿到獎品）。</p>
+  <div id="itemCards"></div>
+</div>
+
+<div class="card">
+  <h2><span aria-hidden="true">📊</span> 名次預算比對（僅供參考）</h2>
+  <p class="section-note">比較各名次設定的預算金額，與目前獎品項目清單中已勾選對應獎項的實際採購金額，方便確認是否超支或還有餘額可採購。</p>
+  <div class="twrap">
+  <table id="budgetCompareTable">
+    <thead><tr><th>名次</th><th>預算金額</th><th>已採購金額</th><th>差額</th></tr></thead>
+    <tbody></tbody>
+  </table>
+  </div>
+</div>
+
+<div class="card">
+  <h2><span aria-hidden="true">💡</span> 預算分配建議（僅供參考）</h2>
+  <p class="section-note">
+    依「獎品總預算」扣除目前已確定的支出（獎品項目清單實際採購金額）後的<b>剩餘可用預算</b>，
+    依常見比例（第一名:第二名:第三名:參加獎 = 3:2:1:1）試算每個名次<b>每人/每份大約可以花費多少錢</b>，
+    供您決定上方「每份預算單價」時參考，實際金額仍可自行調整。
+  </p>
+  <div id="budgetGuideBox"></div>
+</div>
+
+
+<div class="card">
+  <h2><span aria-hidden="true">💰</span> 支出彙總</h2>
+  <div id="summaryBox"></div>
+  <div class="total">總支出：NT$ <span id="grandTotal">0</span></div>
+  <div id="budgetStatus" class="budget-status"></div>
+</div>
+
+<div class="card">
+  <h2><span aria-hidden="true">📑</span> 採購報表</h2>
+  <div class="twrap">
+  <table id="reportTable">
+    <thead><tr><th>類別</th><th>品項</th><th>數量</th><th>單價/費用</th><th>小計</th></tr></thead>
+    <tbody></tbody>
+  </table>
+  </div>
+  <button class="primary" id="exportBtn" aria-label="匯出 Excel 採購清單"><span aria-hidden="true">📥</span> 匯出 Excel 採購清單</button>
+  <div class="hint" id="exportHint"></div>
+</div>
+
+<script>
+const EVENTS = [
+  {key:'single', name:'單打'},
+  {key:'double', name:'雙打'},
+  {key:'team', name:'團體賽'},
+  {key:'fun', name:'趣味競賽'}
+];
+const RANKS = [
+  {key:'1', label:'第一名'},
+  {key:'2', label:'第二名'},
+  {key:'3', label:'第三名'}
+];
+const PRIZE_RATIOS = [
+  {key:'classic', label:'經典陡峭型（6:3:1）', ratio:[6,3,1]},
+  {key:'progressive', label:'平穩漸進型（5:3:2）', ratio:[5,3,2]},
+  {key:'balanced', label:'均衡鼓勵型（3.9:3.3:2.8）', ratio:[3.9,3.3,2.8]}
+];
+const STORE_KEY = 'tt_prize_v2';
+
+function emptyEvent(){
+  return {
+    count:'',
+    groupSize:'',
+    ranks:{ '1':{price:'',qty:''}, '2':{price:'',qty:''}, '3':{price:'',qty:''} },
+    part:'',
+    prizeRatio:''
+  };
+}
+
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORE_KEY);
+    if(raw) return JSON.parse(raw);
+  }catch(e){}
+  const events = {};
+  EVENTS.forEach(ev=>{ events[ev.key] = emptyEvent(); });
+  return {
+    budget:'', totalParticipants:'',
+    eventType:'single',
+    events,
+    items:[
+      {name:'冠亞季軍獎盃',categories:['其他/不分名次'],price:'',qty:''},
+      {name:'獎牌',categories:['其他/不分名次'],price:'',qty:''},
+      {name:'參加禮',categories:['參加獎'],price:'',qty:''},
+      {name:'',categories:['其他/不分名次'],price:'',qty:''},
+      {name:'',categories:['其他/不分名次'],price:'',qty:''},
+      {name:'',categories:['其他/不分名次'],price:'',qty:''}
+    ]
+  };
+}
+let state = loadState();
+if(!state.eventType || !EVENTS.some(ev=>ev.key===state.eventType)) state.eventType = 'single';
+// backfill in case an event or rank is missing from an older saved state
+EVENTS.forEach(ev=>{
+  if(!state.events[ev.key]) state.events[ev.key] = emptyEvent();
+  if(!state.events[ev.key].ranks) state.events[ev.key].ranks = emptyEvent().ranks;
+  if(state.events[ev.key].groupSize === undefined) state.events[ev.key].groupSize = '';
+  if(state.events[ev.key].prizeRatio === undefined) state.events[ev.key].prizeRatio = '';
+  RANKS.forEach(r=>{ if(!state.events[ev.key].ranks[r.key]) state.events[ev.key].ranks[r.key] = {price:'',qty:''}; });
+});
+if(!Array.isArray(state.items)) state.items = [];
+state.items.forEach(it=>{
+  if(Array.isArray(it.categories)) return;
+  if(typeof it.category === 'string' && it.category){ it.categories = [it.category]; }
+  else{ it.categories = ['其他/不分名次']; }
+  delete it.category;
+});
+while(state.items.length < 6) state.items.push({name:'',categories:['其他/不分名次'],price:'',qty:''});
+
+function saveState(){
+  try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }catch(e){}
+}
+function num(v){ const n=parseFloat(v); return isNaN(n)?0:n; }
+function fmt(n){ return Math.round(n).toLocaleString('zh-Hant-TW'); }
+
+function buildEventTypeSelector(){
+  const wrap = document.getElementById('eventTypeSelector');
+  wrap.innerHTML = EVENTS.map(ev=>`
+    <label class="chip ${state.eventType===ev.key?'checked':''}">
+      <input type="radio" name="eventType" value="${ev.key}" ${state.eventType===ev.key?'checked':''}>${ev.name}
+    </label>`).join('');
+  wrap.querySelectorAll('input[type=radio]').forEach(r=>{
+    r.addEventListener('change', ()=>{
+      state.eventType = r.value;
+      saveState();
+      buildEventTypeSelector();
+      buildEventCard();
+      render();
+    });
+  });
+}
+
+function buildEventCard(){
+  const wrap = document.getElementById('eventCards');
+  wrap.innerHTML = '';
+  const ev = EVENTS.find(e=>e.key===state.eventType) || EVENTS[0];
+  const s = state.events[ev.key];
+  const card = document.createElement('div');
+  card.className = 'event-card';
+  let ranksHtml = '';
+  RANKS.forEach(r=>{
+    const rs = s.ranks[r.key];
+    const subtotal = num(rs.price) * num(rs.qty);
+    ranksHtml += `
+      <div class="rank-block">
+        <span class="rlabel">${r.label}</span>
+        <div class="subfield">
+          <label>每份預算單價(元)</label>
+          <input type="number" min="0" data-rank="${r.key}" data-f="price" value="${rs.price}">
+        </div>
+        <div class="subfield">
+          <label>份數</label>
+          <input type="number" min="0" data-rank="${r.key}" data-f="qty" value="${rs.qty}">
+        </div>
+        <div class="rank-subtotal" data-sub="${r.key}">預算合計：NT$ ${fmt(subtotal)}<br><span style="font-weight:400">(每份 ${fmt(num(rs.price))} × ${fmt(num(rs.qty))} 份)</span></div>
+      </div>`;
+  });
+  card.innerHTML = `
+    <h3>本次賽事：${ev.name}</h3>
+    <div class="top-fields">
+      <div class="field" style="margin-bottom:0">
+        <label>參賽人數(僅統計)</label>
+        <input type="number" min="0" data-f="count" value="${s.count}">
+      </div>
+      <div class="field" style="margin-bottom:0">
+        <label>參加獎(每人預算金額)</label>
+        <input type="number" min="0" data-f="part" value="${s.part}">
+      </div>
+      ${ev.key==='fun' ? `
+      <div class="field" style="margin-bottom:0">
+        <label>分組別，每組人數</label>
+        <input type="number" min="1" data-f="groupSize" value="${s.groupSize}">
+      </div>
+      <div class="field" style="margin-bottom:0">
+        <label>預估組數</label>
+        <input type="text" value="${groupCountText(s)}" disabled style="background:var(--head);color:var(--sub)">
+      </div>` : ''}
+    </div>
+    <div class="field" style="margin:10px 0 0">
+      <label>🏅 獎金分配比例（選擇後自動計算前三名「每份預算單價」，已自動扣除參加獎）</label>
+      <div class="chip-group" id="prizeRatioGroup">${PRIZE_RATIOS.map(p=>`
+        <label class="chip ${s.prizeRatio===p.key?'checked':''}">
+          <input type="radio" name="prizeRatio" value="${p.key}" ${s.prizeRatio===p.key?'checked':''}>${p.label}
+        </label>`).join('')}
+      </div>
+      <div class="hint" id="prizeRatioHint"></div>
+    </div>
+    <div class="rank-grid">${ranksHtml}</div>
+    <div id="eventBudgetHint" class="budget-status" style="margin-top:10px"></div>
+    ${ev.key==='fun' ? `
+    <p class="section-note" style="margin-top:8px;margin-bottom:0">
+      ⚠️ 上方「每份預算單價」與「份數」是<b>單份金額</b>，兩者相乘＝<b>該名次的預算總金額</b>（不會再乘以每組人數）；<br>
+      但實際到「獎品項目清單」採購時，因為得獎組別的<b>每位成員</b>都要拿到一份獎品，所以<b>可採購數量上限</b>會是「每組人數 × 份數」。
+    </p>` : ''}
+  `;
+  wrap.appendChild(card);
+
+  wrap.querySelectorAll('input[data-rank]').forEach(inp=>{
+    inp.addEventListener('input', ()=>{
+      state.events[state.eventType].ranks[inp.dataset.rank][inp.dataset.f] = inp.value;
+      const kind = inp.dataset.f === 'price' ? 'rankPrice' : 'rankQty';
+      clampFieldToBudget(kind, inp.dataset.rank);
+      inp.value = state.events[state.eventType].ranks[inp.dataset.rank][inp.dataset.f];
+      saveState(); render();
+    });
+  });
+  wrap.querySelectorAll('input:not([data-rank]):not([disabled]):not([name="prizeRatio"])').forEach(inp=>{
+    inp.addEventListener('input', ()=>{
+      state.events[state.eventType][inp.dataset.f] = inp.value;
+      if(inp.dataset.f === 'part' || inp.dataset.f === 'count'){
+        clampFieldToBudget('part');
+        const partInput = wrap.querySelector('input[data-f="part"]');
+        if(partInput) partInput.value = state.events[state.eventType].part;
+      }
+      saveState(); render();
+    });
+  });
+  wrap.querySelectorAll('input[name="prizeRatio"]').forEach(r=>{
+    r.addEventListener('change', ()=>{
+      applyPrizeRatio(r.value);
+      saveState();
+      buildEventCard();
+      render();
+    });
+  });
+}
+
+function applyPrizeRatio(ratioKey){
+  const preset = PRIZE_RATIOS.find(p=>p.key===ratioKey);
+  const s = state.events[state.eventType];
+  if(!preset){ s.prizeRatio = ''; return; }
+  const budget = num(state.budget);
+  const count = num(s.count);
+  const participationTotal = num(s.part) * count;
+  const pool = Math.max(0, budget - participationTotal);
+  const sum = preset.ratio.reduce((a,b)=>a+b, 0);
+  const rankKeys = ['1','2','3'];
+  rankKeys.forEach((rk,i)=>{
+    let qty = num(s.ranks[rk].qty);
+    if(qty <= 0){ qty = 1; s.ranks[rk].qty = '1'; }
+    const amount = pool * (preset.ratio[i] / sum);
+    s.ranks[rk].price = String(Math.floor(amount / qty));
+  });
+  s.prizeRatio = ratioKey;
+}
+
+function clampFieldToBudget(kind, rankKey){
+  const budget = num(state.budget);
+  if(budget <= 0) return; // no total budget set yet, no cap enforced
+  const s = state.events[state.eventType];
+  const count = num(s.count);
+  let rankTotal = 0;
+  RANKS.forEach(r=>{ rankTotal += num(s.ranks[r.key].price) * num(s.ranks[r.key].qty); });
+  const partTotal = num(s.part) * count;
+  const grandAlloc = partTotal + rankTotal;
+  if(grandAlloc <= budget) return; // within budget, nothing to clamp
+
+  if(kind === 'part'){
+    const maxContribution = Math.max(0, budget - rankTotal);
+    const maxPart = count > 0 ? Math.floor(maxContribution / count) : 0;
+    if(num(s.part) > maxPart) s.part = String(maxPart);
+  } else {
+    const thisContribution = num(s.ranks[rankKey].price) * num(s.ranks[rankKey].qty);
+    const others = grandAlloc - thisContribution;
+    const maxContribution = Math.max(0, budget - others);
+    if(kind === 'rankPrice'){
+      const qty = num(s.ranks[rankKey].qty);
+      const maxPrice = qty > 0 ? Math.floor(maxContribution / qty) : 0;
+      if(num(s.ranks[rankKey].price) > maxPrice) s.ranks[rankKey].price = String(maxPrice);
+    } else if(kind === 'rankQty'){
+      const price = num(s.ranks[rankKey].price);
+      const maxQty = price > 0 ? Math.floor(maxContribution / price) : 0;
+      if(num(s.ranks[rankKey].qty) > maxQty) s.ranks[rankKey].qty = String(maxQty);
+    }
+  }
+}
+
+function groupCountText(s){
+  const count = num(s.count), size = num(s.groupSize);
+  if(count>0 && size>0) return `約 ${Math.ceil(count/size)} 組`;
+  return '';
+}
+
+
+const ITEM_CATEGORIES = ['第一名','第二名','第三名','參加獎','其他/不分名次'];
+
+function categoryNeeded(cat){
+  if(cat === '其他/不分名次') return null; // no quantity cap
+  const s = state.events[state.eventType];
+  if(cat === '參加獎'){
+    return num(s.part) > 0 ? num(s.count) : 0;
+  }
+  const rankMap = {'第一名':'1','第二名':'2','第三名':'3'};
+  const rkey = rankMap[cat];
+  const qty = num(s.ranks[rkey].qty);
+  if(state.eventType === 'fun' && num(s.groupSize) > 0){
+    return qty * num(s.groupSize); // fun-competition prizes go to every member of the winning group
+  }
+  return qty;
+}
+
+function itemMaxQty(it){
+  if(!it.categories || it.categories.length === 0) return null;
+  if(it.categories.includes('其他/不分名次')) return null;
+  let total = 0;
+  it.categories.forEach(c=>{
+    const n = categoryNeeded(c);
+    if(n !== null) total += n;
+  });
+  return total;
+}
+
+function updateItemConstraints(){
+  state.items.forEach((it,i)=>{
+    const max = itemMaxQty(it);
+    const qtyInput = document.querySelector(`#itemCards input[data-i="${i}"][data-f="qty"]`);
+    const hintEl = document.querySelector(`#itemCards .item-max-hint[data-i="${i}"]`);
+    if(!qtyInput) return;
+    if(max === null){
+      qtyInput.removeAttribute('max');
+      if(hintEl) hintEl.textContent = '';
+      return;
+    }
+    qtyInput.setAttribute('max', max);
+    if(num(it.qty) > max){
+      it.qty = String(max);
+      qtyInput.value = it.qty;
+      const subEl = qtyInput.closest('.item-card').querySelector('.item-subtotal b');
+      if(subEl) subEl.textContent = 'NT$ ' + fmt(num(it.price)*num(it.qty));
+      saveState();
+    }
+    if(hintEl){
+      hintEl.textContent = max > 0
+        ? `依對應獎項所需人數計算（趣味競賽名次為「每組人數 × 份數」），此項目數量上限為 ${max}`
+        : `對應的名次尚未設定份數/人數，暫無法採購（上限 0）`;
+    }
+  });
+}
+
+function buildItemCards(){
+  const wrap = document.getElementById('itemCards');
+  wrap.innerHTML = '';
+  state.items.forEach((it,i)=>{
+    const card = document.createElement('div');
+    card.className = 'item-card';
+    const chips = ITEM_CATEGORIES.map(c=>{
+      const checked = it.categories.includes(c);
+      return `<label class="chip ${checked?'checked':''}">
+        <input type="checkbox" data-i="${i}" data-cat="${c}" ${checked?'checked':''}>${c}
+      </label>`;
+    }).join('');
+    card.innerHTML = `
+      <div class="field" style="margin-bottom:0">
+        <label>項目名稱</label>
+        <input type="text" data-i="${i}" data-f="name" value="${it.name}" placeholder="項目 ${i+1}">
+      </div>
+      <div class="field" style="margin-bottom:0;margin-top:8px">
+        <label>對應獎項（可複選）</label>
+        <div class="chip-group">${chips}</div>
+      </div>
+      <div class="top-fields">
+        <div class="field" style="margin-bottom:0">
+          <label>單價(元)</label>
+          <input type="number" min="0" data-i="${i}" data-f="price" value="${it.price}">
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label>數量</label>
+          <input type="number" min="0" ${itemMaxQty(it)!==null ? `max="${itemMaxQty(it)}"` : ''} data-i="${i}" data-f="qty" value="${it.qty}">
+        </div>
+      </div>
+      <div class="hint item-max-hint" data-i="${i}"></div>
+      <div class="item-subtotal">小計 NT$ <b>${fmt(num(it.price)*num(it.qty))}</b></div>
+    `;
+    wrap.appendChild(card);
+  });
+
+  wrap.querySelectorAll('input[type=checkbox]').forEach(cb=>{
+    cb.addEventListener('change', ()=>{
+      const i = cb.dataset.i, cat = cb.dataset.cat;
+      const cats = state.items[i].categories;
+      const idx = cats.indexOf(cat);
+      if(cb.checked && idx===-1) cats.push(cat);
+      if(!cb.checked && idx!==-1) cats.splice(idx,1);
+      if(cats.length===0) cats.push('其他/不分名次');
+      saveState(); buildItemCards(); render();
+    });
+  });
+  wrap.querySelectorAll('input[type=text], input[type=number]').forEach(inp=>{
+    inp.addEventListener('input', ()=>{
+      const i = inp.dataset.i, f = inp.dataset.f;
+      state.items[i][f] = inp.value;
+      if(f==='price' || f==='qty'){
+        const it = state.items[i];
+        inp.closest('.item-card').querySelector('.item-subtotal b').textContent =
+          'NT$ ' + fmt(num(it.price)*num(it.qty));
+      }
+      saveState(); render();
+    });
+  });
+}
+
+function computeEventCost(){
+  const s = state.events[state.eventType];
+  const count = num(s.count);
+  let rankBudget = 0;
+  RANKS.forEach(r=>{
+    const rs = s.ranks[r.key];
+    rankBudget += num(rs.price) * num(rs.qty);
+  });
+  const partCost = num(s.part) * count;
+  return { rankBudget, partCost, count };
+}
+
+function categoryBudget(cat){
+  const s = state.events[state.eventType];
+  if(cat === '參加獎') return num(s.part) * num(s.count);
+  const rankMap = {'第一名':'1','第二名':'2','第三名':'3'};
+  const rkey = rankMap[cat];
+  if(!rkey) return 0;
+  const rs = s.ranks[rkey];
+  return num(rs.price) * num(rs.qty);
+}
+
+function categorySpent(cat){
+  let total = 0;
+  state.items.forEach(it=>{
+    if(!it.categories || !it.categories.includes(cat)) return;
+    // Exclude "其他/不分名次" from the split — it isn't a budgeted rank/participation category
+    const relevantCats = it.categories.filter(c=>c !== '其他/不分名次');
+    if(relevantCats.length === 0) return;
+    const cost = num(it.price) * num(it.qty);
+    if(relevantCats.length === 1){
+      total += cost; // only tagged to this one category — no split needed
+      return;
+    }
+    // Item is tagged to multiple categories (e.g. "第二名" and "第三名"):
+    // split its cost proportionally by each category's needed recipient count,
+    // instead of counting the full cost once per category (which double-counts).
+    const weights = relevantCats.map(c=>{
+      const n = categoryNeeded(c);
+      return (n === null || n < 0) ? 0 : n;
+    });
+    const weightSum = weights.reduce((a,b)=>a+b, 0);
+    if(weightSum <= 0){
+      total += cost / relevantCats.length; // no quantity info to weight by — split evenly
+    } else {
+      const idx = relevantCats.indexOf(cat);
+      total += cost * (weights[idx] / weightSum);
+    }
+  });
+  return total;
+}
+
+function renderBudgetCompare(){
+  const tbody = document.querySelector('#budgetCompareTable tbody');
+  tbody.innerHTML = '';
+  ['第一名','第二名','第三名','參加獎'].forEach(cat=>{
+    const budget = categoryBudget(cat);
+    const spent = categorySpent(cat);
+    const diff = budget - spent;
+    const diffColor = diff >= 0 ? 'var(--ok)' : 'var(--warn)';
+    const diffText = diff >= 0 ? `剩餘 NT$ ${fmt(diff)}` : `超支 NT$ ${fmt(-diff)}`;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${cat}</td><td>${fmt(budget)}</td><td>${fmt(spent)}</td><td style="color:${diffColor};font-weight:600">${diffText}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function render(){
+  document.getElementById('budget').value = state.budget;
+  document.getElementById('totalParticipants').value = state.totalParticipants;
+
+  updateItemConstraints();
+
+  const funGroupInput = document.querySelector('#eventCards input[data-f="groupSize"]');
+  if(funGroupInput){
+    const disp = funGroupInput.closest('.top-fields').querySelector('input[disabled]');
+    if(disp) disp.value = groupCountText(state.events[state.eventType]);
+  }
+
+  RANKS.forEach(r=>{
+    const rs = state.events[state.eventType].ranks[r.key];
+    const subEl = document.querySelector(`.rank-subtotal[data-sub="${r.key}"]`);
+    if(subEl){
+      const subtotal = num(rs.price) * num(rs.qty);
+      subEl.innerHTML = `預算合計：NT$ ${fmt(subtotal)}<br><span style="font-weight:400">(每份 ${fmt(num(rs.price))} × ${fmt(num(rs.qty))} 份)</span>`;
+    }
+  });
+
+  const c = computeEventCost();
+
+  const eventBudgetHint = document.getElementById('eventBudgetHint');
+  if(eventBudgetHint){
+    const totalBudget = num(state.budget);
+    const allocated = c.rankBudget + c.partCost;
+    if(totalBudget <= 0){
+      eventBudgetHint.className = 'budget-status';
+      eventBudgetHint.textContent = `目前已設定金額：NT$ ${fmt(allocated)}（尚未輸入獎品總預算金額，暫無法比對）`;
+    } else if(allocated >= totalBudget){
+      eventBudgetHint.className = 'budget-status over';
+      eventBudgetHint.textContent = `⚠️ 已設定金額 NT$ ${fmt(allocated)} 已達總預算上限 NT$ ${fmt(totalBudget)}`;
+    } else {
+      eventBudgetHint.className = 'budget-status ok';
+      eventBudgetHint.textContent = `已設定金額 NT$ ${fmt(allocated)} / 總預算 NT$ ${fmt(totalBudget)}（尚可分配 NT$ ${fmt(totalBudget-allocated)}）`;
+    }
+  }
+
+  const prizeRatioHint = document.getElementById('prizeRatioHint');
+  if(prizeRatioHint){
+    const s = state.events[state.eventType];
+    const preset = PRIZE_RATIOS.find(p=>p.key===s.prizeRatio);
+    if(!preset){
+      prizeRatioHint.textContent = '尚未選擇分配比例，可點選上方任一項自動計算。';
+    } else {
+      const totalBudget = num(state.budget);
+      if(totalBudget <= 0){
+        prizeRatioHint.textContent = '請先輸入獎品總預算金額，才能自動計算分配金額。';
+      } else {
+        const pool = Math.max(0, totalBudget - c.partCost);
+        prizeRatioHint.textContent = `已依「${preset.label}」比例，自總預算 NT$ ${fmt(totalBudget)} 扣除參加獎 NT$ ${fmt(c.partCost)} 後，用剩餘 NT$ ${fmt(pool)} 計算：第一名每份 NT$ ${fmt(num(s.ranks['1'].price))}、第二名每份 NT$ ${fmt(num(s.ranks['2'].price))}、第三名每份 NT$ ${fmt(num(s.ranks['3'].price))}。若調整了份數、參加獎或總預算，請重新點選比例以更新計算。`;
+      }
+    }
+  }
+
+  const summaryLines = [];
+
+  let itemsTotal = 0;
+  state.items.forEach(it=>{ itemsTotal += num(it.price)*num(it.qty); });
+  summaryLines.push(`<div class="summary-line"><span>獎品項目小計（含各名次與參加獎採購）</span><span>NT$ ${fmt(itemsTotal)}</span></div>`);
+
+  document.getElementById('summaryBox').innerHTML = summaryLines.join('');
+  const grand = itemsTotal;
+  document.getElementById('grandTotal').textContent = fmt(grand);
+
+  const budget = num(state.budget);
+  const statusEl = document.getElementById('budgetStatus');
+  if(budget > 0){
+    const diff = budget - grand;
+    if(diff >= 0){
+      statusEl.className = 'budget-status ok';
+      statusEl.textContent = `✅ 尚在預算內，剩餘 NT$ ${fmt(diff)}`;
+    } else {
+      statusEl.className = 'budget-status over';
+      statusEl.textContent = `⚠️ 超出預算 NT$ ${fmt(-diff)}`;
+    }
+  } else {
+    statusEl.className = 'budget-status';
+    statusEl.textContent = '請輸入獎品總預算金額以進行比對';
+  }
+
+  renderBudgetCompare();
+  renderBudgetGuide(itemsTotal);
+  buildReportTable();
+}
+
+function rankRecipientCount(rkey){
+  const s = state.events[state.eventType];
+  const qty = num(s.ranks[rkey].qty);
+  if(state.eventType === 'fun' && num(s.groupSize) > 0){
+    return qty * num(s.groupSize);
+  }
+  return qty;
+}
+
+function partRecipientCount(){
+  return num(state.events[state.eventType].count);
+}
+
+function renderBudgetGuide(itemsTotal){
+  const box = document.getElementById('budgetGuideBox');
+  const budget = num(state.budget);
+  if(budget <= 0){
+    box.innerHTML = `<div class="hint">請先在上方輸入獎品總預算金額，才能試算分配建議。</div>`;
+    return;
+  }
+  const remaining = budget - itemsTotal;
+  const counts = {
+    '第一名': rankRecipientCount('1'),
+    '第二名': rankRecipientCount('2'),
+    '第三名': rankRecipientCount('3'),
+    '參加獎': partRecipientCount()
+  };
+  const weights = {'第一名':3, '第二名':2, '第三名':1, '參加獎':1};
+  let weightedUnits = 0;
+  Object.keys(counts).forEach(k=>{ weightedUnits += counts[k] * weights[k]; });
+
+  let rowsHtml = '';
+  if(remaining <= 0 || weightedUnits <= 0){
+    rowsHtml = `<div class="hint">${remaining<=0 ? '目前剩餘可用預算為 0 或已超支，暫無法提供分配建議。' : '請先設定各名次的份數／人數，才能試算每人/每份建議金額。'}</div>`;
+  } else {
+    const unitBudget = remaining / weightedUnits;
+    rowsHtml += `<div class="summary-line"><span>剩餘可用預算</span><span>NT$ ${fmt(remaining)}</span></div>`;
+    rowsHtml += `<div class="twrap"><table><thead><tr><th>對象</th><th>預估人數/份數</th><th>建議每人/份可花費</th></tr></thead><tbody>`;
+    Object.keys(counts).forEach(k=>{
+      const cnt = counts[k];
+      const suggested = unitBudget * weights[k];
+      rowsHtml += `<tr><td>${k}</td><td>${cnt>0?fmt(cnt):'—'}</td><td>${cnt>0 ? 'NT$ '+fmt(suggested) : '—'}</td></tr>`;
+    });
+    rowsHtml += `</tbody></table></div>`;
+  }
+  box.innerHTML = rowsHtml;
+}
+
+function buildReportTable(){
+  const tbody = document.querySelector('#reportTable tbody');
+  tbody.innerHTML = '';
+  const rows = [];
+  state.items.forEach(it=>{
+    if(it.name && num(it.qty)>0){
+      const catLabel = (it.categories && it.categories.length) ? it.categories.join('、') : '';
+      const label = catLabel ? `${it.name}（${catLabel}）` : it.name;
+      rows.push(['獎品項目', label, num(it.qty), num(it.price), num(it.price)*num(it.qty)]);
+    }
+  });
+  if(rows.length===0){
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--sub)">尚無資料，請先填寫上方欄位</td></tr>';
+  } else {
+    rows.forEach(r=>{
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${fmt(r[3])}</td><td>${fmt(r[4])}</td>`;
+      tbody.appendChild(tr);
+    });
+  }
+  window._reportRows = rows;
+}
+
+buildEventTypeSelector();
+buildEventCard();
+buildItemCards();
+document.getElementById('budget').addEventListener('input', e=>{ state.budget=e.target.value; saveState(); render(); });
+document.getElementById('totalParticipants').addEventListener('input', e=>{ state.totalParticipants=e.target.value; saveState(); render(); });
+render();
+
+// Excel export via downloads capability
+let downloadsCap = null;
+(async()=>{
+  try{
+    if(window.claude && window.claude.use){
+      downloadsCap = await window.claude.use('downloads');
+    }
+  }catch(e){}
+})();
+
+document.getElementById('exportBtn').addEventListener('click', async ()=>{
+  const btn = document.getElementById('exportBtn');
+  const hint = document.getElementById('exportHint');
+  const rows = window._reportRows || [];
+  if(rows.length===0){
+    hint.textContent = '請先填寫資料再匯出。';
+    return;
+  }
+  btn.disabled = true;
+  const originalHTML = btn.innerHTML;
+  btn.innerHTML = '處理中…';
+  try{
+    const wsData = [['類別','品項','數量','單價/費用','小計']];
+    let grand = 0;
+    rows.forEach(r=>{ wsData.push(r); grand += r[4]; });
+    wsData.push(['','','','總計', grand]);
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    ws['!cols'] = [{wch:10},{wch:16},{wch:8},{wch:12},{wch:12}];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, '採購清單');
+    const wbout = XLSX.write(wb, {bookType:'xlsx', type:'array'});
+    const blob = new Blob([wbout], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+
+    if(!downloadsCap){
+      try{ downloadsCap = await window.claude.use('downloads'); }catch(e){}
+    }
+    if(downloadsCap){
+      hint.textContent = '處理中...';
+      const res = await downloadsCap.save({filename:'桌球獎品採購清單.xlsx', data:blob});
+      hint.textContent = res.status === 'saved' ? '已儲存完成。' : '已送出。';
+    } else {
+      hint.textContent = '此環境無法提供檔案下載功能。';
+    }
+  }catch(err){
+    hint.textContent = '匯出失敗，請重試。';
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = originalHTML;
+  }
+});
+</script>
+</body>
+</html>
