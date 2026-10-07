@@ -137,7 +137,7 @@ button.primary:disabled{opacity:.5;cursor:not-allowed;}
   </p>
   <div class="chip-group" id="eventTypeSelector" role="radiogroup" aria-label="選擇賽事類型" style="margin-bottom:12px"></div>
   <p class="section-note">
-    「參賽人數」為<b>人數統計用</b>，不影響金額計算；<br>
+    參加獎人數依上方「<b>參賽總人數</b>」計算（參加獎每人預算 × 參賽總人數）；<br>
     第一～三名及參加獎的<b>單價 × 份數/人數</b>都是指<b>可用於採購獎品項目的預算金額</b>，<u>不會單獨計入總支出</u>——實際支出請於下方「獎品項目清單」勾選對應獎項並填入實際採購的單價與數量；<br>
     <b>參加獎不發放現金，一律以獎品項目實物發放</b>，請填每人/每隊的預算金額作為採購參考；<br>
     ⚠️ 「參加獎」與第一～三名的設定金額<b>合計不得超過</b>上方「獎品總預算金額」，超過時系統會自動限制輸入。
@@ -260,11 +260,21 @@ state.items.forEach(it=>{
   delete it.category;
 });
 while(state.items.length < 6) state.items.push({name:'',categories:['其他/不分名次'],price:'',qty:''});
+// 舊版資料：人數填在賽別卡片的「參賽人數」，搬到「參賽總人數」
+if(!state.totalParticipants){
+  const oldCount = state.events[state.eventType] && state.events[state.eventType].count;
+  if(oldCount) state.totalParticipants = oldCount;
+}
 
 function saveState(){
   try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }catch(e){}
 }
 function num(v){ const n=parseFloat(v); return isNaN(n)?0:n; }
+function esc(v){
+  return String(v ?? '').replace(/[&<>"']/g, ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+// 參賽人數只有一個來源：上方「參賽總人數」
+function participants(){ return num(state.totalParticipants); }
 function fmt(n){ return Math.round(n).toLocaleString('zh-Hant-TW'); }
 
 function buildEventTypeSelector(){
@@ -313,10 +323,6 @@ function buildEventCard(){
     <h3>本次賽事：${ev.name}</h3>
     <div class="top-fields">
       <div class="field" style="margin-bottom:0">
-        <label>參賽人數(僅統計)</label>
-        <input type="number" min="0" data-f="count" value="${s.count}">
-      </div>
-      <div class="field" style="margin-bottom:0">
         <label>參加獎(每人預算金額)</label>
         <input type="number" min="0" data-f="part" value="${s.part}">
       </div>
@@ -361,7 +367,7 @@ function buildEventCard(){
   wrap.querySelectorAll('input:not([data-rank]):not([disabled]):not([name="prizeRatio"])').forEach(inp=>{
     inp.addEventListener('input', ()=>{
       state.events[state.eventType][inp.dataset.f] = inp.value;
-      if(inp.dataset.f === 'part' || inp.dataset.f === 'count'){
+      if(inp.dataset.f === 'part'){
         clampFieldToBudget('part');
         const partInput = wrap.querySelector('input[data-f="part"]');
         if(partInput) partInput.value = state.events[state.eventType].part;
@@ -384,7 +390,7 @@ function applyPrizeRatio(ratioKey){
   const s = state.events[state.eventType];
   if(!preset){ s.prizeRatio = ''; return; }
   const budget = num(state.budget);
-  const count = num(s.count);
+  const count = participants();
   const participationTotal = num(s.part) * count;
   const pool = Math.max(0, budget - participationTotal);
   const sum = preset.ratio.reduce((a,b)=>a+b, 0);
@@ -402,7 +408,7 @@ function clampFieldToBudget(kind, rankKey){
   const budget = num(state.budget);
   if(budget <= 0) return; // no total budget set yet, no cap enforced
   const s = state.events[state.eventType];
-  const count = num(s.count);
+  const count = participants();
   let rankTotal = 0;
   RANKS.forEach(r=>{ rankTotal += num(s.ranks[r.key].price) * num(s.ranks[r.key].qty); });
   const partTotal = num(s.part) * count;
@@ -430,7 +436,7 @@ function clampFieldToBudget(kind, rankKey){
 }
 
 function groupCountText(s){
-  const count = num(s.count), size = num(s.groupSize);
+  const count = participants(), size = num(s.groupSize);
   if(count>0 && size>0) return `約 ${Math.ceil(count/size)} 組`;
   return '';
 }
@@ -442,7 +448,7 @@ function categoryNeeded(cat){
   if(cat === '其他/不分名次') return null; // no quantity cap
   const s = state.events[state.eventType];
   if(cat === '參加獎'){
-    return num(s.part) > 0 ? num(s.count) : 0;
+    return num(s.part) > 0 ? participants() : 0;
   }
   const rankMap = {'第一名':'1','第二名':'2','第三名':'3'};
   const rkey = rankMap[cat];
@@ -506,7 +512,7 @@ function buildItemCards(){
     card.innerHTML = `
       <div class="field" style="margin-bottom:0">
         <label>項目名稱</label>
-        <input type="text" data-i="${i}" data-f="name" value="${it.name}" placeholder="項目 ${i+1}">
+        <input type="text" data-i="${i}" data-f="name" value="${esc(it.name)}" placeholder="項目 ${i+1}">
       </div>
       <div class="field" style="margin-bottom:0;margin-top:8px">
         <label>對應獎項（可複選）</label>
@@ -555,7 +561,7 @@ function buildItemCards(){
 
 function computeEventCost(){
   const s = state.events[state.eventType];
-  const count = num(s.count);
+  const count = participants();
   let rankBudget = 0;
   RANKS.forEach(r=>{
     const rs = s.ranks[r.key];
@@ -567,7 +573,7 @@ function computeEventCost(){
 
 function categoryBudget(cat){
   const s = state.events[state.eventType];
-  if(cat === '參加獎') return num(s.part) * num(s.count);
+  if(cat === '參加獎') return num(s.part) * participants();
   const rankMap = {'第一名':'1','第二名':'2','第三名':'3'};
   const rkey = rankMap[cat];
   if(!rkey) return 0;
@@ -717,7 +723,7 @@ function rankRecipientCount(rkey){
 }
 
 function partRecipientCount(){
-  return num(state.events[state.eventType].count);
+  return participants();
 }
 
 function renderBudgetGuide(itemsTotal){
@@ -771,7 +777,7 @@ function buildReportTable(){
   } else {
     rows.forEach(r=>{
       const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${fmt(r[3])}</td><td>${fmt(r[4])}</td>`;
+      tr.innerHTML = `<td>${r[0]}</td><td>${esc(r[1])}</td><td>${r[2]}</td><td>${fmt(r[3])}</td><td>${fmt(r[4])}</td>`;
       tbody.appendChild(tr);
     });
   }
@@ -782,7 +788,13 @@ buildEventTypeSelector();
 buildEventCard();
 buildItemCards();
 document.getElementById('budget').addEventListener('input', e=>{ state.budget=e.target.value; saveState(); render(); });
-document.getElementById('totalParticipants').addEventListener('input', e=>{ state.totalParticipants=e.target.value; saveState(); render(); });
+document.getElementById('totalParticipants').addEventListener('input', e=>{
+  state.totalParticipants=e.target.value;
+  clampFieldToBudget('part');
+  const partInput = document.querySelector('#eventCards input[data-f="part"]');
+  if(partInput) partInput.value = state.events[state.eventType].part;
+  saveState(); render();
+});
 render();
 
 // Excel export via downloads capability
@@ -826,7 +838,16 @@ document.getElementById('exportBtn').addEventListener('click', async ()=>{
       const res = await downloadsCap.save({filename:'桌球獎品採購清單.xlsx', data:blob});
       hint.textContent = res.status === 'saved' ? '已儲存完成。' : '已送出。';
     } else {
-      hint.textContent = '此環境無法提供檔案下載功能。';
+      // 一般瀏覽器（直接開檔、GitHub Pages）：用標準下載連結
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = '桌球獎品採購清單.xlsx';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url), 1000);
+      hint.textContent = '已下載完成。';
     }
   }catch(err){
     hint.textContent = '匯出失敗，請重試。';
