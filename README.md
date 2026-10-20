@@ -39,3 +39,10 @@
 ## 部署
 
 倉庫 **Settings** → **Pages** → Branch 選 `main`、資料夾 `/ (root)`。
+
+## 桌球賽事系列
+同類系統：[DSC-table-tennis](https://github.com/evanchi1111-sys/DSC-table-tennis)（雙打計分）、[singles-tournament](https://github.com/evanchi1111-sys/singles-tournament)（單打賽）、[team-lineup](https://github.com/evanchi1111-sys/team-lineup)（團體賽排點）。
+
+## 授權
+
+以 [MIT 授權](LICENSE) 釋出，Copyright (c) 2026 evanchi1111-sys。
